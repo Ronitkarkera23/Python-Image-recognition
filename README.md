@@ -1,2 +1,2 @@
 # Python-Image-recognition
-Image scanning and updating in excel .
+Scans Gpay image and takes the amount and name from it and updates it into the excel sheet 
