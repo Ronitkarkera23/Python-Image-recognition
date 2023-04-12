@@ -1,1 +1,92 @@
+import cv2
+import pytesseract
+import openpyxl
+from PIL import Image
+
+# Load the template images
+templates = [cv2.imread('C:/Users/ronit/OneDrive/Desktop/gpayss/templates/template1.jpeg'),
+             cv2.imread('C:/Users/ronit/OneDrive/Desktop/gpayss/templates/template2.jpeg'),
+             cv2.imread('C:/Users/ronit/OneDrive/Desktop/gpayss/templates/template3.jpeg'),
+             cv2.imread('C:/Users/ronit/OneDrive/Desktop/gpayss/templates/template4.jpeg'),
+             cv2.imread('C:/Users/ronit/OneDrive/Desktop/gpayss/templates/template5.jpeg'),
+             cv2.imread('C:/Users/ronit/OneDrive/Desktop/gpayss/templates/template6.jpeg'),
+             cv2.imread('C:/Users/ronit/OneDrive/Desktop/gpayss/templates/template7.jpeg'),
+             ]
+
+# Define the ROI coordinates
+roi_coords = [
+    [0, 50, 800, 3000],  # template 1
+    [0, 50, 800, 3000],  # template 2
+    [0, 50, 800, 3000],  # template 3
+    [0, 50, 800, 3000],  # template 4
+    [0, 50, 900, 2000],  # template 5
+    [0, 50, 900, 3000],
+    [0, 50, 900, 3000],
+]
+
+# Initialize SIFT detector
+sift = cv2.SIFT_create()
+
+# Initialize Brute-Force matcher
+bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+
+# Set a threshold for matching
+threshold = 25
+
+# Set the tesseract path (replace this with the path to your tesseract installation)
+pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+
+# Create a new Excel workbook
+wb = openpyxl.load_workbook('C:/Users/ronit/OneDrive/Desktop/new.xlsx')
+sheet = wb['Sheet1']
+last_row = sheet.max_row
+
+# Set the headers for the columns
+sheet.cell(row=1, column=3).value = 'Text'
+
+# Loop over all the screenshot images
+for i in range(1, 101):
+    # Load the screenshot image
+    screenshot_path = f"C:/Users/ronit/OneDrive/Desktop/gpayss/gpay_screenshot_{i}.jpeg"
+    screenshot = cv2.imread(screenshot_path)
+
+    # Find keypoints and descriptors in the screenshot
+    kp2, des2 = sift.detectAndCompute(screenshot, None)
+
+    # Search for each template
+    for j, template in enumerate(templates):
+        # Find keypoints and descriptors in the template
+        kp1, des1 = sift.detectAndCompute(template, None)
+
+        # Match descriptors
+        matches = bf.match(des1, des2)
+
+        # Sort matches by distance
+        matches = sorted(matches, key=lambda x: x.distance)
+
+        # Check if the threshold is met
+        if matches[0].distance < threshold:
+            # Template found
+            print(f'Template found at:', kp2[matches[0].trainIdx].pt)
+
+            # Extract the ROI using the coordinates for the current template
+
+            x1, y1, x2, y2 = roi_coords[j]
+
+            roi = screenshot[y1:y2, x1:x2]
+
+            # Extract the name using OCR
+            text = pytesseract.image_to_string(roi).strip()  # extract text using OCR
+            print(f'Text: {text}')
+
+            # Save the screenshot extracted text in the Excel sheet
+            row = i + 1  # add 1 to account for every image.
+
+            sheet.cell(row=row, column=3).value = text
+            # Save the Excel workbook
+            wb.save('C:/Users/ronit/OneDrive/Desktop/new.xlsx')
+
+        else:
+            # Template not found
+            print(f'Template not found in screenshot {i}')
 
